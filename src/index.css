@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+html[data-theme="light"] {
+    --app-bg-color: oklch(0.967 0.003 264.542); /* Tailwind gray-100 */
+    --app-text-color: oklch(0.21 0.034 264.665); /* Tailwind gray-900 */
+    --card-bg-color: oklch(1 0 0); /* white */
+    --card-text-color: oklch(0.21 0.034 264.665); /* gray-900 */
+    --border-color: oklch(0.872 0.01 258.338); /* gray-300 */
+    --input-bg-color: oklch(1 0 0); /* white */
+    --input-text-color: oklch(0.373 0.034 259.733); /* gray-700 */
+    --input-placeholder-color: oklch(0.707 0.022 261.325); /* gray-400 */
+    --button-bg-color: oklch(0.928 0.006 264.531); /* gray-200 */
+    --button-hover-bg-color: oklch(0.872 0.01 258.338); /* gray-300 */
+    --button-text-color: oklch(0.373 0.034 259.733); /* gray-700 */
+    --icon-color: oklch(0.373 0.034 259.733); /* gray-700 */
+    --icon-hover-bg-color: oklch(0.928 0.006 264.531); /* gray-200 */
+    --subtle-text-color: oklch(0.446 0.03 256.802); /* gray-600 */
+    --output-bg-color: oklch(0.985 0.002 247.839); /* gray-50 */
+
+    /* Info Block Colors - Light Theme */
+    --info-blue-bg-color: oklch(0.932 0.032 255.585); /* Tailwind blue-100 */
+    --info-blue-text-color: oklch(0.488 0.243 264.376); /* Tailwind blue-700 */
+    --info-blue-border-color: oklch(
+        0.809 0.105 251.813
+    ); /* Tailwind blue-300 */
+    --info-green-bg-color: oklch(0.962 0.044 156.743); /* Tailwind green-100 */
+    --info-green-text-color: oklch(
+        0.527 0.154 150.069
+    ); /* Tailwind green-700 */
+    --info-green-border-color: oklch(
+        0.871 0.15 154.449
+    ); /* Tailwind green-300 */
+}
+
+html[data-theme="dark"] {
+    --app-bg-color: oklch(0.21 0.034 264.665); /* Tailwind gray-900 */
+    --app-text-color: oklch(0.967 0.003 264.542); /* Tailwind gray-100 */
+    --card-bg-color: oklch(0.278 0.033 256.848); /* gray-800 */
+    --card-text-color: oklch(0.967 0.003 264.542); /* gray-100 */
+    --border-color: oklch(0.446 0.03 256.802); /* gray-600 */
+    --input-bg-color: oklch(0.373 0.034 259.733); /* gray-700 */
+    --input-text-color: oklch(0.928 0.006 264.531); /* gray-200 */
+    --input-placeholder-color: oklch(0.551 0.027 264.364); /* gray-500 */
+    --button-bg-color: oklch(0.373 0.034 259.733); /* gray-700 */
+    --button-hover-bg-color: oklch(0.446 0.03 256.802); /* gray-600 */
+    --button-text-color: oklch(0.928 0.006 264.531); /* gray-200 */
+    --icon-color: oklch(0.928 0.006 264.531); /* gray-200 */
+    --icon-hover-bg-color: oklch(0.373 0.034 259.733); /* gray-700 */
+    --subtle-text-color: oklch(0.707 0.022 261.325); /* gray-400 */
+    --output-bg-color: oklch(
+        0.373 0.034 259.733 / 0.5
+    ); /* gray-700 opacity 50% */
+
+    /* Info Block Colors - Dark Theme */
+    --info-blue-bg-color: oklch(
+        0.379 0.146 265.522 / 0.3
+    ); /* Tailwind blue-900 with 30% opacity */
+    --info-blue-text-color: oklch(0.809 0.105 251.813); /* Tailwind blue-300 */
+    --info-blue-border-color: oklch(
+        0.488 0.243 264.376
+    ); /* Tailwind blue-700 */
+    --info-green-bg-color: oklch(
+        0.393 0.095 152.535 / 0.3
+    ); /* Tailwind green-900 with 30% opacity */
+    --info-green-text-color: oklch(0.871 0.15 154.449); /* Tailwind green-300 */
+    --info-green-border-color: oklch(
+        0.527 0.154 150.069
+    ); /* Tailwind green-700 */
+}
+
+/* Styling for placeholders using CSS variables */
+textarea::placeholder {
+    color: var(--input-placeholder-color);
+}
