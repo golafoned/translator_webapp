@@ -200,7 +200,6 @@ const App = () => {
                             },
                         }
                     );
-                    // setIsLoading(false); // Already handled by callbacks for ONNX
                 } else {
                     let result: string = "";
                     if (sourceLang === targetLang) {
@@ -383,7 +382,6 @@ const App = () => {
                 onnxReady === false && (
                     <div className="progress-bars-container mb-4 w-full max-w-md px-2">
                         {" "}
-                        {/* Added w-full max-w-md px-2 for better layout */}
                         <label className="block text-center text-sm text-[var(--subtle-text-color)] mb-2">
                             Loading models... (this happens once)
                         </label>
@@ -409,7 +407,6 @@ const App = () => {
                 )}
 
             <main className="w-full max-w-4xl flex-1 flex flex-col bg-[var(--card-bg-color)] p-4 sm:p-6 rounded-xl shadow-xl">
-                {/* Language Selection Area & Info Message */}
                 <div className="mb-1 relative">
                     <AnimatePresence mode="wait">
                         <motion.div
@@ -460,7 +457,6 @@ const App = () => {
                     </AnimatePresence>
                 </div>
 
-                {/* ONNX Info Message Display Area */}
                 <AnimatePresence>
                     {onnxInfoMessage && (
                         <motion.div
@@ -548,8 +544,8 @@ const App = () => {
 
             <footer className="w-full max-w-4xl mt-6 sm:mt-8 text-center text-xs sm:text-sm text-[var(--subtle-text-color)] px-2">
                 <p>
-                    &copy; {new Date().getFullYear()} TranslateEase.
-                    Minimalistic Design.
+                    &copy; {new Date().getFullYear()} All rights reserved by
+                    Demian Dutka🤓
                 </p>
             </footer>
         </div>
