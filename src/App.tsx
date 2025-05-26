@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react"; // Added useRef
+import { useState, useEffect, useCallback, useRef } from "react";
 import LanguageSelector from "./components/LanguageSelector";
 import Progress from "./components/Progress";
 import useDebounce from "./hooks/useDebounce";
@@ -75,6 +75,18 @@ const App = () => {
         };
     }, [translationMode, onnxReady]);
 
+    // Hide ONNX loading indicator when all downloads are done
+    useEffect(() => {
+        if (
+            translationMode === "onnx" &&
+            onnxProgressItems.length === 0 &&
+            onnxReady === false
+        ) {
+            setOnnxReady(true);
+            setShowOnnxLoadingIndicator(false);
+        }
+    }, [onnxProgressItems, translationMode, onnxReady]);
+
     // Apply theme when component mounts and when theme changes
     useEffect(() => {
         document.documentElement.setAttribute("data-theme", theme);
@@ -83,12 +95,10 @@ const App = () => {
         localStorage.setItem("theme", theme);
     }, [theme]);
 
-    // Listen for system theme preference changes
     useEffect(() => {
         const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
         const handleChange = (e: MediaQueryListEvent) => {
-            // Only set theme based on system preference if no theme is stored in localStorage
             if (!localStorage.getItem("theme")) {
                 setTheme(e.matches ? "dark" : "light");
             }
@@ -106,18 +116,26 @@ const App = () => {
         });
     };
 
+    const MAX_INPUT_LENGTH = 1000;
+    const isInputTooLong = inputText.length > MAX_INPUT_LENGTH;
+
     const handleTranslate = useCallback(
         async (textToTranslate: string) => {
-            if (!textToTranslate.trim()) {
+            if (
+                !textToTranslate.trim() ||
+                textToTranslate.length > MAX_INPUT_LENGTH
+            ) {
                 setOutputText("");
                 return;
             }
             setIsLoading(true);
-            setOutputText(""); // Clear previous output
+            console.log(isLoading);
+            setOutputText("");
 
             try {
                 if (translationMode === "onnx") {
                     setOnnxDisabled(true);
+
                     const src =
                         topLanguages.find((l) => l.code === sourceLang)
                             ?.onnxCode || "ukr_Cyrl";
@@ -172,7 +190,7 @@ const App = () => {
                                     partialOutput
                                 );
                                 setOutputText(partialOutput);
-                                setIsLoading(false); // Show updates as they come
+                                setIsLoading(false);
                             },
                             onTranslationComplete: (finalOutput) => {
                                 console.log(
@@ -196,7 +214,7 @@ const App = () => {
                                 setOutputText("Error during ONNX translation.");
                                 setOnnxDisabled(false);
                                 setIsLoading(false);
-                                setOnnxReady(null); // Reset ready state on error
+                                setOnnxReady(null);
                             },
                         }
                     );
@@ -228,17 +246,17 @@ const App = () => {
     );
 
     useEffect(() => {
-        if (debouncedInputText) {
+        if (debouncedInputText && !isInputTooLong) {
             handleTranslate(debouncedInputText);
-        } else {
+        } else if (!debouncedInputText) {
             setOutputText("");
         }
-    }, [debouncedInputText, handleTranslate]);
+    }, [debouncedInputText, handleTranslate, isInputTooLong]);
 
     const handleSwapLanguages = () => {
         if (sourceLang === targetLang) {
             setOnnxInfoMessage(
-                "Source and target languages cannot be the same."
+                "Джерело та цільові мови не можуть бути однаковими."
             );
             return;
         }
@@ -255,13 +273,17 @@ const App = () => {
         <div className="min-h-screen bg-[var(--app-bg-color)] text-[var(--app-text-color)] transition-colors duration-300 flex flex-col items-center p-2 sm:p-4 font-sans">
             <header className="w-full max-w-4xl mb-4 sm:mb-6 flex justify-between items-center px-2">
                 <h1 className="text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">
-                    TranslateCoursework
+                    Перекладач
                 </h1>
                 <div className="flex items-center space-x-2 sm:space-x-3">
                     <button
                         onClick={() => setShowSettings(!showSettings)}
                         className="p-2 rounded-full hover:bg-[var(--icon-hover-bg-color)] transition-colors text-[var(--icon-color)]"
                         aria-label="Settings"
+                        disabled={
+                            translationMode === "onnx" &&
+                            showOnnxLoadingIndicator
+                        }
                     >
                         <Settings2 size={22} />
                     </button>
@@ -269,6 +291,10 @@ const App = () => {
                         onClick={toggleTheme}
                         className="p-2 rounded-full hover:bg-[var(--icon-hover-bg-color)] transition-colors text-[var(--icon-color)]"
                         aria-label="Toggle Theme"
+                        disabled={
+                            translationMode === "onnx" &&
+                            showOnnxLoadingIndicator
+                        }
                     >
                         {theme === "light" ? (
                             <Moon size={22} />
@@ -297,7 +323,7 @@ const App = () => {
                         >
                             <div className="flex justify-between items-center mb-6">
                                 <h2 className="text-xl font-semibold">
-                                    Settings
+                                    Налаштування
                                 </h2>
                                 <button
                                     onClick={() => setShowSettings(false)}
@@ -321,7 +347,7 @@ const App = () => {
                             </div>
                             <div className="space-y-4">
                                 <p className="text-sm text-[var(--subtle-text-color)]">
-                                    Translation Mode:
+                                    Режим перекладу:
                                 </p>
                                 <div className="flex space-x-2">
                                     {["onnx", "llm"].map((mode) => (
@@ -329,7 +355,6 @@ const App = () => {
                                             key={mode}
                                             onClick={() => {
                                                 setTranslationMode(mode);
-                                                setInputText("");
                                                 setOutputText("");
                                                 setOnnxInfoMessage("");
                                             }}
@@ -341,7 +366,7 @@ const App = () => {
                         }`}
                                         >
                                             {mode === "onnx"
-                                                ? "Local ONNX"
+                                                ? "Локальний ONNX"
                                                 : "LLM API"}
                                         </button>
                                     ))}
@@ -353,9 +378,9 @@ const App = () => {
                                             className="inline mr-2 flex-shrink-0"
                                         />
                                         <span>
-                                            🔏ONNX Mode: Translate locally using
-                                            ONNX models. No internet required.
-                                            Full privacy.
+                                            🔏ONNX режим: Переклад локально за
+                                            допомогою ONNX моделей. Інтернет не
+                                            потрібен. Повна приватність.
                                         </span>
                                     </div>
                                 )}
@@ -366,8 +391,8 @@ const App = () => {
                                             className="inline mr-2 flex-shrink-0"
                                         />
                                         <span>
-                                            🧠LLM Mode: Translate using a
-                                            cloud-based large language model.
+                                            🧠LLM режим: Переклад за допомогою
+                                            хмарної великої мовної моделі.
                                         </span>
                                     </div>
                                 )}
@@ -383,7 +408,7 @@ const App = () => {
                     <div className="progress-bars-container mb-4 w-full max-w-md px-2">
                         {" "}
                         <label className="block text-center text-sm text-[var(--subtle-text-color)] mb-2">
-                            Loading models... (this happens once)
+                            Завантаження моделей... (відбувається один раз)
                         </label>
                         {onnxProgressItems.map((data) => (
                             <div
@@ -393,7 +418,7 @@ const App = () => {
                                 {" "}
                                 {/* Added key and mb-1 */}
                                 <span className="flex-1 truncate font-mono text-xs sm:text-sm text-[var(--subtle-text-color)]">
-                                    {data.file}
+                                    {data.file || "Файл моделі"}
                                 </span>
                                 <span className="w-14 text-right font-semibold text-blue-600 dark:text-blue-400 text-xs sm:text-sm tabular-nums">
                                     {(data.progress ?? 0).toFixed(2)}%
@@ -430,13 +455,22 @@ const App = () => {
                                             );
                                     }}
                                     languages={topLanguages}
-                                    defaultLabel="Source"
-                                    disabled={false}
+                                    defaultLabel="Джерело"
+                                    disabled={
+                                        translationMode === "onnx" &&
+                                        (onnxDisabled ||
+                                            showOnnxLoadingIndicator)
+                                    }
                                 />
                                 <button
                                     onClick={handleSwapLanguages}
                                     className="p-2.5 rounded-lg hover:bg-[var(--icon-hover-bg-color)] transition-colors group"
                                     aria-label="Swap languages"
+                                    disabled={
+                                        translationMode === "onnx" &&
+                                        (onnxDisabled ||
+                                            showOnnxLoadingIndicator)
+                                    }
                                 >
                                     <ArrowRightLeft
                                         size={20}
@@ -449,8 +483,12 @@ const App = () => {
                                     languages={topLanguages.filter(
                                         (l) => l.code !== sourceLang
                                     )}
-                                    defaultLabel="Target"
-                                    disabled={false}
+                                    defaultLabel="Ціль"
+                                    disabled={
+                                        translationMode === "onnx" &&
+                                        (onnxDisabled ||
+                                            showOnnxLoadingIndicator)
+                                    }
                                 />
                             </>
                         </motion.div>
@@ -481,21 +519,64 @@ const App = () => {
                             className="mb-1.5 text-sm font-medium text-[var(--subtle-text-color)]"
                         >
                             {topLanguages.find((l) => l.code === sourceLang)
-                                ?.name || "Source Text"}
+                                ?.name || "Текст для перекладу"}
                         </label>
                         <textarea
                             id="inputText"
                             value={inputText}
-                            onChange={(e) => setInputText(e.target.value)}
-                            placeholder={`Enter text in ${
+                            onChange={(e) => {
+                                if (e.target.value.length <= MAX_INPUT_LENGTH) {
+                                    setInputText(e.target.value);
+                                } else {
+                                    setInputText(
+                                        e.target.value.slice(
+                                            0,
+                                            MAX_INPUT_LENGTH
+                                        )
+                                    );
+                                }
+                            }}
+                            onPaste={(e) => {
+                                const paste = e.clipboardData.getData("text");
+                                if (
+                                    inputText.length + paste.length >
+                                    MAX_INPUT_LENGTH
+                                ) {
+                                    e.preventDefault();
+                                    const allowed =
+                                        MAX_INPUT_LENGTH - inputText.length;
+                                    if (allowed > 0) {
+                                        setInputText(
+                                            inputText + paste.slice(0, allowed)
+                                        );
+                                    }
+                                }
+                            }}
+                            placeholder={`Введіть текст ${
                                 topLanguages.find((l) => l.code === sourceLang)
-                                    ?.name || "source language"
+                                    ?.name
+                                    ? `(${
+                                          topLanguages.find(
+                                              (l) => l.code === sourceLang
+                                          )?.name
+                                      })`
+                                    : "у вихідній мові"
                             }...`}
                             className="flex-1 w-full p-3 sm:p-4 border border-[var(--border-color)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--input-bg-color)] text-[var(--input-text-color)] transition-shadow resize-none text-base"
                             disabled={
                                 translationMode === "onnx" && onnxDisabled
                             }
+                            maxLength={MAX_INPUT_LENGTH}
                         />
+                        <div className="flex justify-end mt-1 text-xs select-none">
+                            <span
+                                style={{
+                                    color: isInputTooLong ? "red" : "inherit",
+                                }}
+                            >
+                                {inputText.length}/{MAX_INPUT_LENGTH}
+                            </span>
+                        </div>
                     </div>
                     {/* Output Area */}
                     <div className="flex flex-col">
@@ -505,7 +586,7 @@ const App = () => {
                                 className="text-sm font-medium text-[var(--subtle-text-color)]"
                             >
                                 {topLanguages.find((l) => l.code === targetLang)
-                                    ?.name || "Translated Text"}
+                                    ?.name || "Перекладений текст"}
                             </label>
                             {isLoading && (
                                 <Loader2
@@ -531,10 +612,10 @@ const App = () => {
                                             : "text-[var(--input-text-color)]"
                                     }`}
                                 >
-                                    {isLoading && !outputText
-                                        ? "Translating..."
+                                    {isLoading
+                                        ? "Перекладаємо..."
                                         : outputText ||
-                                          "Translation will appear here."}
+                                          "Тут з'явиться переклад."}
                                 </motion.p>
                             </AnimatePresence>
                         </div>
@@ -544,8 +625,8 @@ const App = () => {
 
             <footer className="w-full max-w-4xl mt-6 sm:mt-8 text-center text-xs sm:text-sm text-[var(--subtle-text-color)] px-2">
                 <p>
-                    &copy; {new Date().getFullYear()} All rights reserved by
-                    Demian Dutka🤓
+                    &copy; {new Date().getFullYear()} Всі права захищені
+                    Дем'яном Дуткою 🤓
                 </p>
             </footer>
         </div>

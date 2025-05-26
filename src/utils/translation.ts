@@ -1,30 +1,15 @@
 import { codeToApiLang } from "./langMap";
-// import external from
-import { pipeline, env, type PipelineType } from "@xenova/transformers";
+import { env } from "@xenova/transformers";
 env.allowLocalModels = false;
-// Helper: get ort from window (with type safety)
-declare global {
-    interface Window {
-        ort?: any;
+
+let onnxWorker: Worker | null = null;
+function getOnnxWorker(): Worker {
+    if (!onnxWorker) {
+        onnxWorker = new Worker(new URL("./onnxWorker.ts", import.meta.url), {
+            type: "module",
+        });
     }
-}
-
-class MyTranslationPipeline {
-    static task = "translation";
-    static model = "Xenova/nllb-200-distilled-600M";
-    static instance: Promise<any> | null = null;
-
-    static async getInstance(
-        progress_callback: ((progress: any) => void) | null = null
-    ) {
-        if (this.instance === null) {
-            this.instance = pipeline(this.task as PipelineType, this.model, {
-                progress_callback: progress_callback ?? undefined,
-            });
-        }
-
-        return this.instance;
-    }
+    return onnxWorker;
 }
 
 export interface OnnxTranslationCallbacks {
@@ -38,7 +23,7 @@ export interface OnnxTranslationCallbacks {
     }) => void;
     onModelReady?: () => void;
     onTranslationUpdate?: (output: string) => void;
-    onTranslationComplete?: (output: any) => void; // output can be the full translation object
+    onTranslationComplete?: (output: any) => void;
     onError?: (error: any) => void;
 }
 
@@ -49,42 +34,34 @@ export async function onnxTranslateWithCallbacks(
     callbacks: OnnxTranslationCallbacks
 ): Promise<void> {
     try {
-        const translator = await MyTranslationPipeline.getInstance(
-            (progressData) => {
-                if (callbacks.onModelLoadingEvent) {
-                    callbacks.onModelLoadingEvent(progressData);
-                }
+        const worker = getOnnxWorker();
+        worker.onmessage = (event: MessageEvent) => {
+            const data = event.data;
+            switch (data.status) {
+                case "model_loading":
+                case "initiate":
+                case "progress":
+                case "done":
+                    callbacks.onModelLoadingEvent?.(data);
+                    break;
+                case "update":
+                    callbacks.onTranslationUpdate?.(data.output);
+                    break;
+                case "complete":
+                    callbacks.onTranslationComplete?.(data.output);
+                    break;
             }
-        );
-
-        if (callbacks.onModelReady) {
-            callbacks.onModelReady();
-        }
-
-        const output = await translator(text, {
-            tgt_lang: tgt_lang,
-            src_lang: src_lang,
-            callback_function: (x: any) => {
-                if (callbacks.onTranslationUpdate) {
-                    const partialOutput = translator.tokenizer.decode(
-                        x[0].output_token_ids,
-                        {
-                            skip_special_tokens: true,
-                        }
-                    );
-                    callbacks.onTranslationUpdate(partialOutput);
-                }
-            },
-        });
-
-        if (callbacks.onTranslationComplete) {
-            callbacks.onTranslationComplete(output);
-        }
+        };
+        worker.onerror = (err) => {
+            callbacks.onError?.(err);
+        };
+        // Notify model ready after first load (handled in onnxWorker if needed)
+        callbacks.onModelReady?.();
+        // Post translation request
+        worker.postMessage({ text, src_lang, tgt_lang });
     } catch (error) {
         console.error("ONNX Translation error in utility:", error);
-        if (callbacks.onError) {
-            callbacks.onError(error);
-        }
+        callbacks.onError?.(error);
     }
 }
 
